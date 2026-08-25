@@ -1,0 +1,89 @@
+import {describe, expect, test} from "bun:test"
+import {
+  createHighlighterRegistry,
+  listLanguageHighlighters,
+  registerLanguageHighlighter,
+  resolveLanguageHighlighter,
+  tokenize,
+} from "./highlighter.ts"
+import type {LanguageHighlighter} from "./tokens.ts"
+
+describe("resolveLanguageHighlighter", () => {
+  test("resolves TypeScript by id and aliases", () => {
+    expect(resolveLanguageHighlighter({languageId: "typescript"}).id).toBe("typescript")
+    expect(resolveLanguageHighlighter({languageId: "ts"}).id).toBe("typescript")
+    expect(resolveLanguageHighlighter({languageId: "js"}).id).toBe("typescript")
+    expect(resolveLanguageHighlighter({languageId: "javascript"}).id).toBe("typescript")
+  })
+
+  test("resolves TypeScript and JavaScript file extensions", () => {
+    expect(resolveLanguageHighlighter({path: "foo.ts"}).id).toBe("typescript")
+    expect(resolveLanguageHighlighter({path: "foo.js"}).id).toBe("typescript")
+  })
+
+  test("resolves HTML and CSS by id and file extensions", () => {
+    expect(resolveLanguageHighlighter({languageId: "html"}).id).toBe("html")
+    expect(resolveLanguageHighlighter({languageId: "css"}).id).toBe("css")
+    expect(resolveLanguageHighlighter({languageId: "json"}).id).toBe("json")
+    expect(resolveLanguageHighlighter({languageId: "markdown"}).id).toBe("markdown")
+    expect(resolveLanguageHighlighter({languageId: "md"}).id).toBe("markdown")
+    expect(resolveLanguageHighlighter({languageId: "xml"}).id).toBe("xml")
+    expect(resolveLanguageHighlighter({languageId: "sqlite"}).id).toBe("sqlite")
+    expect(resolveLanguageHighlighter({languageId: "sql"}).id).toBe("sqlite")
+    expect(resolveLanguageHighlighter({path: "proposal.html"}).id).toBe("html")
+    expect(resolveLanguageHighlighter({path: "theme.css"}).id).toBe("css")
+    expect(resolveLanguageHighlighter({path: "scene.svg"}).id).toBe("xml")
+    expect(resolveLanguageHighlighter({path: "doc.xml"}).id).toBe("xml")
+    expect(resolveLanguageHighlighter({path: "package.json"}).id).toBe("json")
+    expect(resolveLanguageHighlighter({path: "rules/metafor.md"}).id).toBe("markdown")
+    expect(resolveLanguageHighlighter({path: "query.sql"}).id).toBe("sqlite")
+  })
+
+  test("falls back to plaintext for unknown extensions", () => {
+    expect(resolveLanguageHighlighter({path: "foo.unknown"}).id).toBe("plaintext")
+  })
+
+  test("uses an explicit fallback after language and path resolution", () => {
+    expect(resolveLanguageHighlighter({path: "foo.unknown", fallbackLanguageId: "typescript"}).id).toBe("typescript")
+    expect(tokenize("const value = 1")[0]).toEqual([])
+    expect(tokenize("const value = 1", {fallbackLanguageId: "typescript"})[0]?.[0]?.c).toBe("k")
+  })
+
+  test("replaces registered highlighter with the same id", () => {
+    const first: LanguageHighlighter = {
+      id: "unit-test-language",
+      name: "Unit Test Language",
+      extensions: ["utl"],
+      aliases: ["utl"],
+      tokenize: (lines) => lines.map(() => []),
+    }
+    const second: LanguageHighlighter = {
+      ...first,
+      name: "Unit Test Language 2",
+      tokenize: (lines) => lines.map((line) => line.length > 0 ? [{s: 0, e: line.length, c: "x"}] : []),
+    }
+
+    registerLanguageHighlighter(first)
+    registerLanguageHighlighter(second)
+
+    const matches = listLanguageHighlighters().filter((item) => item.id === first.id)
+    expect(matches).toHaveLength(1)
+    expect(matches[0]).toBe(second)
+    expect(resolveLanguageHighlighter({languageId: "utl"})).toBe(second)
+  })
+
+  test("isolates custom registries", () => {
+    const registry = createHighlighterRegistry()
+    const custom: LanguageHighlighter = {
+      id: "isolated",
+      name: "Isolated",
+      extensions: ["iso"],
+      tokenize: (lines) => lines.map((line) => line.length === 0 ? [] : [{s: 0, e: line.length, c: "d"}]),
+    }
+
+    registry.register(custom)
+
+    expect(registry.resolve({path: "sample.iso"})).toBe(custom)
+    expect(resolveLanguageHighlighter({path: "sample.iso"}).id).toBe("plaintext")
+  })
+})
