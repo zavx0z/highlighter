@@ -1,7 +1,7 @@
-import type {EditorToken, EditorTokens, LanguageHighlighter, TokenizeOptions} from "../tokens.ts"
+import type {LanguageHighlighter, Token, TokenizeOptions, Tokens} from "../tokens.ts"
 import {tokenizePattern} from "./pattern-highlighter.ts"
 
-export function tokenizeCss(lines: readonly string[], options: TokenizeOptions = {}): EditorTokens {
+export function tokenizeCss(lines: readonly string[], options: TokenizeOptions = {}): Tokens {
   const tokens = tokenizePattern(lines, "css", options)
   applyCssColorSwatches(lines, tokens)
   return tokens
@@ -15,7 +15,7 @@ export const cssHighlighter: LanguageHighlighter = {
   tokenize: tokenizeCss,
 }
 
-function applyCssColorSwatches(lines: readonly string[], tokens: EditorTokens): void {
+function applyCssColorSwatches(lines: readonly string[], tokens: Tokens): void {
   const colorRe = /#[0-9a-fA-F]{3,8}\b|\brgba?\(\s*(?:(?:[+-]?(?:\d+(?:\.\d+)?|\.\d+)%?)\s*(?:,\s*|\s+)){2}[+-]?(?:\d+(?:\.\d+)?|\.\d+)%?(?:\s*(?:,\s*|\/\s*)[+-]?(?:\d+(?:\.\d+)?|\.\d+)%?)?\s*\)/gi
   for (let lineIndex = 0; lineIndex < lines.length; lineIndex++) {
     const line = lines[lineIndex] ?? ""
@@ -30,6 +30,6 @@ function applyCssColorSwatches(lines: readonly string[], tokens: EditorTokens): 
   }
 }
 
-function findToken(tokens: readonly EditorToken[], s: number, e: number): EditorToken | undefined {
+function findToken(tokens: readonly Token[], s: number, e: number): Token | undefined {
   return tokens.find((token) => token.s <= s && token.e >= e)
 }

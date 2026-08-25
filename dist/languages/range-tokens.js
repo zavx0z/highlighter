@@ -28,12 +28,12 @@ export function distributeRangeTokens(tokens, lines) {
             const sCol = cursor - lineStart;
             const eCol = spanEnd - lineStart;
             if (eCol > sCol) {
-                const editorToken = { s: sCol, e: eCol, c: token.c };
+                const distributedToken = { s: sCol, e: eCol, c: token.c };
                 if (token.fg !== undefined)
-                    editorToken.fg = token.fg;
+                    distributedToken.fg = token.fg;
                 if (token.bg !== undefined)
-                    editorToken.bg = token.bg;
-                result[lineIndex].push(editorToken);
+                    distributedToken.bg = token.bg;
+                result[lineIndex].push(distributedToken);
             }
             cursor = spanEnd + 1;
             lineIndex++;

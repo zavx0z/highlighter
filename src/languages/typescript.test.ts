@@ -1,6 +1,6 @@
 import {describe, expect, test} from "bun:test"
 import {tokenizeTypeScript} from "./typescript.ts"
-import type {EditorToken} from "../tokens.ts"
+import type {Token} from "../tokens.ts"
 
 describe("tokenizeTypeScript", () => {
   test("highlights common JavaScript and TypeScript token classes", () => {
@@ -103,14 +103,14 @@ describe("tokenizeTypeScript", () => {
   })
 })
 
-function tokenFor(line: string, tokens: readonly EditorToken[], fragment: string): EditorToken | undefined {
+function tokenFor(line: string, tokens: readonly Token[], fragment: string): Token | undefined {
   const s = line.indexOf(fragment)
   if (s < 0) return undefined
   const e = s + fragment.length
   return tokens.find((token) => token.s <= s && token.e >= e)
 }
 
-function stringTokenCovering(line: string, tokens: readonly EditorToken[], fragment: string): EditorToken | undefined {
+function stringTokenCovering(line: string, tokens: readonly Token[], fragment: string): Token | undefined {
   const s = line.indexOf(fragment)
   if (s < 0) return undefined
   const e = s + fragment.length

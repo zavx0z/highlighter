@@ -1,6 +1,6 @@
 import {describe, expect, test} from "bun:test"
 import {tokenizeSqlite} from "./sqlite.ts"
-import type {EditorToken} from "../tokens.ts"
+import type {Token} from "../tokens.ts"
 
 describe("tokenizeSqlite", () => {
   test("highlights SQLite keywords, strings, functions, comments and numbers", () => {
@@ -19,7 +19,7 @@ describe("tokenizeSqlite", () => {
   })
 })
 
-function tokenFor(line: string, tokens: readonly EditorToken[], fragment: string): EditorToken | undefined {
+function tokenFor(line: string, tokens: readonly Token[], fragment: string): Token | undefined {
   const s = line.indexOf(fragment)
   if (s < 0) return undefined
   const e = s + fragment.length

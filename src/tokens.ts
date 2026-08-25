@@ -29,8 +29,3 @@ export type LanguageHighlighter = {
   aliases?: readonly string[]
   tokenize: Tokenize
 }
-
-/** Compatibility names for consumers that model tokens as editor rows. */
-export type EditorToken = Token
-export type EditorTokens = Tokens
-export type EditorTokenize = Tokenize

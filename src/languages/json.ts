@@ -1,7 +1,7 @@
-import type {EditorTokens, LanguageHighlighter, TokenizeOptions} from "../tokens.ts"
+import type {LanguageHighlighter, TokenizeOptions, Tokens} from "../tokens.ts"
 import {tokenizeJsonPattern} from "./pattern-highlighter.ts"
 
-export function tokenizeJson(lines: readonly string[], options: TokenizeOptions = {}): EditorTokens {
+export function tokenizeJson(lines: readonly string[], options: TokenizeOptions = {}): Tokens {
   return tokenizeJsonPattern(lines, options)
 }
 

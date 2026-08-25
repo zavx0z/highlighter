@@ -1,6 +1,6 @@
 import {describe, expect, test} from "bun:test"
 import {tokenizeJson} from "./json.ts"
-import type {EditorToken} from "../tokens.ts"
+import type {Token} from "../tokens.ts"
 
 describe("tokenizeJson", () => {
   test("highlights package json keys, globs, escaped strings and literals", () => {
@@ -29,7 +29,7 @@ describe("tokenizeJson", () => {
   })
 })
 
-function tokenFor(line: string, tokens: readonly EditorToken[], fragment: string): EditorToken | undefined {
+function tokenFor(line: string, tokens: readonly Token[], fragment: string): Token | undefined {
   const s = line.indexOf(fragment)
   if (s < 0) return undefined
   const e = s + fragment.length

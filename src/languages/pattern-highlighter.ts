@@ -1,4 +1,4 @@
-import type {EditorTokens, ResolveForeground, TokenizeOptions} from "../tokens.ts"
+import type {ResolveForeground, TokenizeOptions, Tokens} from "../tokens.ts"
 import {distributeRangeTokens, pushRange, type RangeToken} from "./range-tokens.ts"
 import {type PatternTokenStream, tokenizePatternText} from "./pattern-engine.ts"
 import {patternLanguages, type PatternLanguageId} from "./pattern-languages.ts"
@@ -102,33 +102,33 @@ export function tokenizePattern(
   lines: readonly string[],
   language: PatternLanguageId,
   options: TokenizeOptions = {},
-): EditorTokens {
+): Tokens {
   const source = lines.join("\n")
   return distributeRangeTokens(tokenizePatternRangeTokens(source, 0, language, options), lines)
 }
 
-export function tokenizeTypeScriptPattern(lines: readonly string[], options: TokenizeOptions = {}): EditorTokens {
+export function tokenizeTypeScriptPattern(lines: readonly string[], options: TokenizeOptions = {}): Tokens {
   return applySqlTemplateOverlays(tokenizePattern(lines, "typescript", options), lines, options)
 }
 
-export function tokenizeSqlitePattern(lines: readonly string[], options: TokenizeOptions = {}): EditorTokens {
+export function tokenizeSqlitePattern(lines: readonly string[], options: TokenizeOptions = {}): Tokens {
   return tokenizePattern(lines, "sql", options)
 }
 
-export function tokenizeJsonPattern(lines: readonly string[], options: TokenizeOptions = {}): EditorTokens {
+export function tokenizeJsonPattern(lines: readonly string[], options: TokenizeOptions = {}): Tokens {
   return tokenizePattern(lines, "json", options)
 }
 
-export function tokenizeXmlPattern(lines: readonly string[], options: TokenizeOptions = {}): EditorTokens {
+export function tokenizeXmlPattern(lines: readonly string[], options: TokenizeOptions = {}): Tokens {
   return tokenizePattern(lines, "xml", options)
 }
 
-export function tokenizeHtmlPattern(lines: readonly string[], options: TokenizeOptions = {}): EditorTokens {
+export function tokenizeHtmlPattern(lines: readonly string[], options: TokenizeOptions = {}): Tokens {
   return tokenizePattern(lines, "markup", options)
 }
 
-export function tokenizeMarkdownPattern(lines: readonly string[], options: TokenizeOptions = {}): EditorTokens {
-  const result: EditorTokens = lines.map(() => [])
+export function tokenizeMarkdownPattern(lines: readonly string[], options: TokenizeOptions = {}): Tokens {
+  const result: Tokens = lines.map(() => [])
   for (let lineIndex = 0; lineIndex < lines.length;) {
     const line = lines[lineIndex] ?? ""
     const fence = markdownFenceOpen(line)
@@ -157,7 +157,7 @@ export function tokenizeMarkdownPattern(lines: readonly string[], options: Token
 export function tokenizeSourcePattern(
   lines: readonly string[],
   opts: TokenizeOptions & {path?: string} = {},
-): EditorTokens {
+): Tokens {
   if (isHtmlPath(opts.path)) return tokenizeHtmlPattern(lines, opts)
   if (isCssPath(opts.path)) return tokenizePattern(lines, "css", opts)
   if (isXmlPath(opts.path)) return tokenizeXmlPattern(lines, opts)
@@ -655,10 +655,10 @@ function skipWhitespaceRight(source: string, start: number): number {
 }
 
 function applySqlTemplateOverlays(
-  base: EditorTokens,
+  base: Tokens,
   lines: readonly string[],
   options: TokenizeOptions,
-): EditorTokens {
+): Tokens {
   const source = lines.join("\n")
   const templates = findSqlTemplateRanges(source)
   if (templates.length === 0) return base
@@ -792,7 +792,7 @@ type MarkdownFence = {
   infoEnd: number
 }
 
-function tokenizeMarkdownLine(line: string): EditorTokens[number] {
+function tokenizeMarkdownLine(line: string): Tokens[number] {
   const tokens: RangeToken[] = []
   const heading = /^( {0,3})(#{1,6})(?:[ \t]+(.+))?$/.exec(line)
   if (heading !== null) {
@@ -823,7 +823,7 @@ function tokenizeMarkdownLine(line: string): EditorTokens[number] {
   return tokens.sort(compareRangeTokens)
 }
 
-function tokenizeMarkdownFenceLine(line: string, fence: MarkdownFence): EditorTokens[number] {
+function tokenizeMarkdownFenceLine(line: string, fence: MarkdownFence): Tokens[number] {
   const tokens: RangeToken[] = []
   pushRange(tokens, fence.markerStart, fence.markerEnd, "p")
   if (fence.infoEnd > fence.infoStart) pushRange(tokens, fence.infoStart, fence.infoEnd, "t")
@@ -834,7 +834,7 @@ function tokenizeMarkdownFenceContent(
   lines: readonly string[],
   info: string,
   options: TokenizeOptions,
-): EditorTokens {
+): Tokens {
   const language = markdownFenceLanguage(info)
   if (language === "typescript") return tokenizeTypeScriptPattern(lines, options)
   if (language === "html") return tokenizeHtmlPattern(lines, options)

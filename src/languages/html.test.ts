@@ -1,6 +1,6 @@
 import {describe, expect, test} from "bun:test"
 import {tokenizeHtml} from "./html.ts"
-import type {EditorToken} from "../tokens.ts"
+import type {Token} from "../tokens.ts"
 
 describe("tokenizeHtml", () => {
   test("highlights HTML plus embedded CSS and TypeScript", () => {
@@ -32,7 +32,7 @@ describe("tokenizeHtml", () => {
   })
 })
 
-function tokenFor(line: string, tokens: readonly EditorToken[], fragment: string): EditorToken | undefined {
+function tokenFor(line: string, tokens: readonly Token[], fragment: string): Token | undefined {
   const s = line.indexOf(fragment)
   if (s < 0) return undefined
   const e = s + fragment.length

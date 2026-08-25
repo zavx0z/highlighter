@@ -1,6 +1,6 @@
 import {describe, expect, test} from "bun:test"
 import {tokenizeXml} from "./xml.ts"
-import type {EditorToken} from "../tokens.ts"
+import type {Token} from "../tokens.ts"
 
 describe("tokenizeXml", () => {
   test("highlights XML tags, tag punctuation, attributes, strings and entities without embedded CSS", () => {
@@ -25,7 +25,7 @@ describe("tokenizeXml", () => {
   })
 })
 
-function tokenFor(line: string, tokens: readonly EditorToken[], fragment: string): EditorToken | undefined {
+function tokenFor(line: string, tokens: readonly Token[], fragment: string): Token | undefined {
   const s = line.indexOf(fragment)
   if (s < 0) return undefined
   const e = s + fragment.length

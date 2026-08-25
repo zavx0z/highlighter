@@ -1,6 +1,6 @@
-import type {EditorTokens, LanguageHighlighter} from "../tokens.ts"
+import type {LanguageHighlighter, Tokens} from "../tokens.ts"
 
-export function tokenizePlaintext(lines: readonly string[]): EditorTokens {
+export function tokenizePlaintext(lines: readonly string[]): Tokens {
   return lines.map(() => [])
 }
 

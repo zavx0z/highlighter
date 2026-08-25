@@ -1,7 +1,7 @@
-import type {EditorTokens, LanguageHighlighter, TokenizeOptions} from "../tokens.ts"
+import type {LanguageHighlighter, TokenizeOptions, Tokens} from "../tokens.ts"
 import {tokenizeHtmlPattern} from "./pattern-highlighter.ts"
 
-export function tokenizeHtml(lines: readonly string[], options: TokenizeOptions = {}): EditorTokens {
+export function tokenizeHtml(lines: readonly string[], options: TokenizeOptions = {}): Tokens {
   return tokenizeHtmlPattern(lines, options)
 }
 

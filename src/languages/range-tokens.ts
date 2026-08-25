@@ -1,4 +1,4 @@
-import type {EditorToken, EditorTokens} from "../tokens.ts"
+import type {Token, Tokens} from "../tokens.ts"
 
 export type SyntaxCategory = "k" | "s" | "n" | "c" | "t" | "f" | "p" | "d"
 export type RangeToken = {s: number; e: number; c: SyntaxCategory | string; fg?: string; bg?: string}
@@ -12,8 +12,8 @@ export function pushRange(tokens: RangeToken[], s: number, e: number, c: SyntaxC
   tokens.push(token)
 }
 
-export function distributeRangeTokens(tokens: readonly RangeToken[], lines: readonly string[]): EditorTokens {
-  const result: EditorTokens = lines.map(() => [] as EditorToken[])
+export function distributeRangeTokens(tokens: readonly RangeToken[], lines: readonly string[]): Tokens {
+  const result: Tokens = lines.map(() => [] as Token[])
   const offsets = new Array<number>(lines.length + 1)
   offsets[0] = 0
   for (let lineIndex = 0; lineIndex < lines.length; lineIndex++) {
@@ -32,10 +32,10 @@ export function distributeRangeTokens(tokens: readonly RangeToken[], lines: read
       const sCol = cursor - lineStart
       const eCol = spanEnd - lineStart
       if (eCol > sCol) {
-        const editorToken: EditorToken = {s: sCol, e: eCol, c: token.c}
-        if (token.fg !== undefined) editorToken.fg = token.fg
-        if (token.bg !== undefined) editorToken.bg = token.bg
-        result[lineIndex]!.push(editorToken)
+        const distributedToken: Token = {s: sCol, e: eCol, c: token.c}
+        if (token.fg !== undefined) distributedToken.fg = token.fg
+        if (token.bg !== undefined) distributedToken.bg = token.bg
+        result[lineIndex]!.push(distributedToken)
       }
       cursor = spanEnd + 1
       lineIndex++
