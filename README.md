@@ -68,3 +68,17 @@ const tokens = tokenize(source, {
 `registerLanguageHighlighter`, `listLanguageHighlighters`, and
 `resolveLanguageHighlighter`. Use `createHighlighterRegistry()` when a project
 needs an isolated registry.
+
+## Performance
+
+Semantic overlays index token containment instead of scanning every token for
+every identifier. Ordered property/parameter scans reuse their delimiter state.
+The index tests containment by one token; adjacent tokens are not merged into
+a synthetic covering range. Token categories, ranges, foreground/background,
+and callback behavior remain unchanged. Rendering can coalesce compatible paint
+runs after theme resolution without changing this lexical contract.
+
+A local Bun 1.4.2 comparison against the preceding build produced byte-identical
+tokens: 10,000 simple TypeScript lines took 3509 → 535 ms; 1200 functions with
+typed parameters and nested object keys took 10088 → 154 ms. These are CPU
+tokenizer measurements, not editor input latency or frame-rate guarantees.

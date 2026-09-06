@@ -1,0 +1,1 @@
+{"version":3,"file":"range-coverage.d.ts","sourceRoot":"","sources":["../../src/languages/range-coverage.ts"],"names":[],"mappings":"AAAA,OAAO,KAAK,EAAC,UAAU,EAAC,MAAM,mBAAmB,CAAA;AAEjD,MAAM,MAAM,aAAa,GAAG,CAAC,KAAK,EAAE,MAAM,EAAE,GAAG,EAAE,MAAM,KAAK,OAAO,CAAA;AAEnE,kFAAkF;AAClF,wBAAgB,mBAAmB,CAAC,MAAM,EAAE,SAAS,UAAU,EAAE,GAAG,aAAa,CAoBhF"}

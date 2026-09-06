@@ -1,6 +1,7 @@
 import { distributeRangeTokens, pushRange } from "./range-tokens.js";
 import { tokenizePatternText } from "./pattern-engine.js";
 import { patternLanguages } from "./pattern-languages.js";
+import { createTokenCoverage } from "./range-coverage.js";
 const SCOPE_MAP = {
     "at": ["punctuation.decorator", "keyword.operator"],
     "atrule": ["keyword.other", "keyword"],
@@ -228,12 +229,15 @@ function compareRangeTokens(left, right) {
 function applySemanticIdentifierOverlays(source, base, tokens, resolveForeground) {
     applyObjectKeyOverlays(source, base, tokens, resolveForeground);
     applyParameterOverlays(source, base, tokens, resolveForeground);
+    // Matches within a pass do not overlap: appended ranges cannot cover later
+    // matches. Rebuild the coverage snapshot only between the distinct passes.
+    const covered = createTokenCoverage(tokens);
     const identRe = /[$_\p{ID_Start}][$_\u200c\u200d\p{ID_Continue}]*/gu;
     for (const match of source.matchAll(identRe)) {
         const text = match[0];
         const start = base + (match.index ?? 0);
         const end = start + text.length;
-        if (hasTokenCovering(tokens, start, end))
+        if (covered(start, end))
             continue;
         if (TEST_HELPER_FUNCTIONS.has(text) || isFunctionLead(source, end)) {
             pushRange(tokens, start, end, "f", undefined, colorForTypes(["function"], resolveForeground));
@@ -245,28 +249,33 @@ function applySemanticIdentifierOverlays(source, base, tokens, resolveForeground
     applyMemberAccessOverlays(source, base, tokens, resolveForeground);
 }
 function applyObjectKeyOverlays(source, base, tokens, resolveForeground) {
+    const covered = createTokenCoverage(tokens);
+    const containerAt = createContainerReader(source);
     const keyRe = /(^|[,{])([ \t]*)([$_\p{ID_Start}][$_\u200c\u200d\p{ID_Continue}]*)(?=\s*:)/gmu;
     for (const match of source.matchAll(keyRe)) {
         const text = match[3];
         if (text === undefined)
             continue;
         const start = (match.index ?? 0) + match[1].length + match[2].length;
-        if (nearestContainer(source, start) !== "{")
+        if (containerAt(start) !== "{")
             continue;
-        pushPropertyToken(base, tokens, start, text.length, resolveForeground);
+        pushPropertyToken(base, tokens, start, text.length, resolveForeground, covered);
     }
 }
 function applyParameterOverlays(source, base, tokens, resolveForeground) {
+    const covered = createTokenCoverage(tokens);
+    const containerAt = createContainerReader(source);
     const parameterRe = /[$_\p{ID_Start}][$_\u200c\u200d\p{ID_Continue}]*(?=\s*\??\s*:)/gu;
     for (const match of source.matchAll(parameterRe)) {
         const text = match[0];
         const start = match.index ?? 0;
-        if (nearestContainer(source, start) !== "(")
+        if (containerAt(start) !== "(")
             continue;
-        pushParameterToken(source, base, tokens, start, text.length, resolveForeground);
+        pushParameterToken(source, base, tokens, start, text.length, resolveForeground, covered);
     }
 }
 function applyMemberAccessOverlays(source, base, tokens, resolveForeground) {
+    const covered = createTokenCoverage(tokens);
     const memberRe = /(?:\?\.|\.)\s*([$_\p{ID_Start}][$_\u200c\u200d\p{ID_Continue}]*)/gu;
     for (const match of source.matchAll(memberRe)) {
         const text = match[1];
@@ -274,59 +283,68 @@ function applyMemberAccessOverlays(source, base, tokens, resolveForeground) {
             continue;
         const accessorStart = match.index ?? 0;
         const propertyStart = accessorStart + match[0].length - text.length;
-        pushMemberPropertyToken(base, tokens, accessorStart, propertyStart, text.length, resolveForeground);
+        pushMemberPropertyToken(base, tokens, accessorStart, propertyStart, text.length, resolveForeground, covered);
     }
 }
-function pushParameterToken(source, base, tokens, start, length, resolveForeground) {
+function pushParameterToken(source, base, tokens, start, length, resolveForeground, covered) {
     const end = start + length;
     const absStart = base + start;
     const absEnd = base + end;
-    if (hasTokenCovering(tokens, absStart, absEnd))
+    if (covered(absStart, absEnd))
         return;
     pushRange(tokens, absStart, absEnd, "d", undefined, colorForTypes(["parameter"], resolveForeground));
 }
-function pushPropertyToken(base, tokens, start, length, resolveForeground) {
+function pushPropertyToken(base, tokens, start, length, resolveForeground, covered) {
     const absStart = base + start;
     const absEnd = absStart + length;
-    if (hasTokenCovering(tokens, absStart, absEnd))
+    if (covered(absStart, absEnd))
         return;
     pushRange(tokens, absStart, absEnd, "t", undefined, colorForTypes(["property"], resolveForeground));
 }
-function pushMemberPropertyToken(base, tokens, accessorStart, propertyStart, propertyLength, resolveForeground) {
+function pushMemberPropertyToken(base, tokens, accessorStart, propertyStart, propertyLength, resolveForeground, covered) {
     const propertyAbsStart = base + propertyStart;
     const propertyAbsEnd = propertyAbsStart + propertyLength;
-    if (hasTokenCovering(tokens, propertyAbsStart, propertyAbsEnd))
+    if (covered(propertyAbsStart, propertyAbsEnd))
         return;
     pushRange(tokens, base + accessorStart, propertyAbsEnd, "t", undefined, colorForTypes(["property"], resolveForeground));
 }
-function nearestContainer(source, end) {
+function createContainerReader(source) {
     const stack = [];
-    for (let i = 0; i < end; i++) {
-        const ch = source[i] ?? "";
-        if (ch === "\"" || ch === "'" || ch === "`") {
-            i = Math.max(i, scanQuoted(source, i, ch) - 1);
-            continue;
+    let i = 0;
+    let previousEnd = 0;
+    return end => {
+        if (end < previousEnd) {
+            i = 0;
+            stack.length = 0;
         }
-        if (ch === "/" && source[i + 1] === "/") {
-            const next = source.indexOf("\n", i + 2);
-            i = next < 0 ? end : next;
-            continue;
+        previousEnd = end;
+        for (; i < end; i++) {
+            const ch = source[i] ?? "";
+            if (ch === "\"" || ch === "'" || ch === "`") {
+                i = Math.max(i, scanQuoted(source, i, ch) - 1);
+                continue;
+            }
+            if (ch === "/" && source[i + 1] === "/") {
+                const next = source.indexOf("\n", i + 2);
+                i = next < 0 ? source.length : next;
+                continue;
+            }
+            if (ch === "/" && source[i + 1] === "*") {
+                const next = source.indexOf("*/", i + 2);
+                i = next < 0 ? source.length : next + 1;
+                continue;
+            }
+            if (ch === "{" || ch === "(" || ch === "[")
+                stack.push(ch);
+            else if (ch === "}")
+                popContainer(stack, "{");
+            else if (ch === ")")
+                popContainer(stack, "(");
+            else if (ch === "]")
+                popContainer(stack, "[");
         }
-        if (ch === "/" && source[i + 1] === "*") {
-            const next = source.indexOf("*/", i + 2);
-            i = next < 0 ? end : next + 1;
-            continue;
-        }
-        if (ch === "{" || ch === "(" || ch === "[")
-            stack.push(ch);
-        else if (ch === "}")
-            popContainer(stack, "{");
-        else if (ch === ")")
-            popContainer(stack, "(");
-        else if (ch === "]")
-            popContainer(stack, "[");
-    }
-    return stack[stack.length - 1];
+        return stack[stack.length - 1];
+    };
 }
 function popContainer(stack, opener) {
     for (let i = stack.length - 1; i >= 0; i--) {
@@ -334,9 +352,6 @@ function popContainer(stack, opener) {
         if (current === opener)
             return;
     }
-}
-function hasTokenCovering(tokens, start, end) {
-    return tokens.some((token) => token.s <= start && token.e >= end);
 }
 function isFunctionLead(source, start) {
     let i = skipWhitespaceRight(source, start);
@@ -422,12 +437,13 @@ function pushTemplateExpressionTokens(source, base, tokens, start, end, options)
     tokens.push(...expressionTokens);
 }
 function applyDefaultIdentifierOverlays(source, base, tokens, resolveForeground) {
+    const covered = createTokenCoverage(tokens);
     const identRe = /[$_\p{ID_Start}][$_\u200c\u200d\p{ID_Continue}]*/gu;
     for (const match of source.matchAll(identRe)) {
         const text = match[0];
         const start = base + (match.index ?? 0);
         const end = start + text.length;
-        if (hasTokenCovering(tokens, start, end))
+        if (covered(start, end))
             continue;
         pushRange(tokens, start, end, "d", undefined, colorForTypes(["variable"], resolveForeground));
     }
