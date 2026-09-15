@@ -3,6 +3,13 @@ import {tokenizeJson} from "./json.ts"
 import type {Token} from "../tokens.ts"
 
 describe("tokenizeJson", () => {
+  test("строковые значения с повторяющимися escape не становятся ключами", () => {
+    const value = '\\"/\n\t\r\b\f'.repeat(64)
+    const source = JSON.stringify({source: value})
+    const tokens = tokenizeJson([source])[0]!
+    expect(tokenFor(source, tokens, '"source"')?.c).toBe("t")
+    expect(tokenFor(source, tokens, JSON.stringify(value))?.c).toBe("s")
+  })
   test("highlights package json keys, globs, escaped strings and literals", () => {
     const lines = [
       '  "workspaces": [',

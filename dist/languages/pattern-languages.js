@@ -282,7 +282,8 @@ const cssGrammar = {
     },
     "punctuation": /[(){};:,]/,
 };
-const jsonString = /"(?:\\(?:["\\/bfnrt]|u[\dA-Fa-f]{4}|[\s\S])|[^"\\\r\n])*"/;
+// Непересекающиеся ветви исключают экспоненциальный перебор escape-последовательностей при поиске ключа.
+const jsonString = /"(?:\\[\s\S]|[^"\\\r\n])*"/;
 const jsonGrammar = {
     "property": {
         pattern: RegExp(`${jsonString.source}(?=\\s*:)`),
