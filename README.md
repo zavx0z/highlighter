@@ -33,6 +33,13 @@ Built-in languages are TypeScript/JavaScript, HTML, CSS, JSON, Markdown, XML,
 SQLite/SQL, and plaintext. HTML supports embedded CSS and TypeScript, Markdown
 supports fenced languages, and TypeScript supports SQL tagged templates.
 
+JSX и TSX доступны через `jsx` / `tsx`, `javascriptreact` / `typescriptreact`
+и расширения `.jsx` / `.tsx`, в том числе в Markdown fences. Они выделяют
+имена тегов и компонентов (`entity.name.tag`), атрибуты,
+строковые значения и фрагменты. Выражения в `{…}` сохраняют TypeScript-подсветку;
+текст между тегами не интерпретируется как JavaScript. Обычный `typescript`
+сохраняет прежнюю грамматику. Это лексическая подсветка, не проверка JSX-типов.
+
 ## Token shape
 
 ```ts

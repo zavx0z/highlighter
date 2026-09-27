@@ -2,6 +2,7 @@ import { distributeRangeTokens, pushRange } from "./range-tokens.js";
 import { tokenizePatternText } from "./pattern-engine.js";
 import { patternLanguages } from "./pattern-languages.js";
 import { createTokenCoverage } from "./range-coverage.js";
+import { jsxRanges } from "./jsx-ranges.js";
 const SCOPE_MAP = {
     "at": ["punctuation.decorator", "keyword.operator"],
     "atrule": ["keyword.other", "keyword"],
@@ -100,6 +101,42 @@ export function tokenizePattern(lines, language, options = {}) {
 }
 export function tokenizeTypeScriptPattern(lines, options = {}) {
     return applySqlTemplateOverlays(tokenizePattern(lines, "typescript", options), lines, options);
+}
+export function tokenizeJsxPattern(lines, options = {}) {
+    const source = lines.join("\n");
+    const ranges = jsxRanges(source, options);
+    if (ranges.length === 0)
+        return tokenizeTypeScriptPattern(lines, options);
+    // Пробелы сохраняют UTF-16 offsets и строки, скрывая JSX от JS-грамматики.
+    const masked = [];
+    let cursor = 0;
+    for (const range of ranges) {
+        masked.push(source.slice(cursor, range.s), source.slice(range.s, range.e).replace(/[^\r\n]/g, " "));
+        cursor = range.e;
+    }
+    masked.push(source.slice(cursor));
+    const script = tokenizeTypeScriptPattern(masked.join("").split("\n"), options);
+    const markup = distributeRangeTokens(ranges, lines);
+    return script.map((tokens, line) => {
+        const overlays = markup[line];
+        // Например, template-string может покрывать JSX внутри ${…}.
+        const clipped = [];
+        let overlayIndex = 0;
+        for (const token of tokens) {
+            let start = token.s;
+            while (overlayIndex < overlays.length && overlays[overlayIndex].e <= start)
+                overlayIndex++;
+            for (let i = overlayIndex; i < overlays.length && overlays[i].s < token.e; i++) {
+                const overlay = overlays[i];
+                if (overlay.s > start)
+                    clipped.push({ ...token, s: start, e: overlay.s });
+                start = Math.max(start, overlay.e);
+            }
+            if (start < token.e)
+                clipped.push({ ...token, s: start });
+        }
+        return [...clipped, ...overlays].sort((left, right) => left.s - right.s || left.e - right.e);
+    });
 }
 export function tokenizeSqlitePattern(lines, options = {}) {
     return tokenizePattern(lines, "sql", options);
@@ -699,6 +736,8 @@ function tokenizeMarkdownFenceLine(line, fence) {
 }
 function tokenizeMarkdownFenceContent(lines, info, options) {
     const language = markdownFenceLanguage(info);
+    if (language === "jsx" || language === "tsx")
+        return tokenizeJsxPattern(lines, options);
     if (language === "typescript")
         return tokenizeTypeScriptPattern(lines, options);
     if (language === "html")
@@ -759,7 +798,11 @@ function markdownFenceClose(line, fence) {
 }
 function markdownFenceLanguage(info) {
     const language = info.trim().toLowerCase().replace(/^language-/, "");
-    if (["ts", "tsx", "js", "jsx", "javascript", "typescript"].includes(language))
+    if (language === "jsx" || language === "javascriptreact")
+        return "jsx";
+    if (language === "tsx" || language === "typescriptreact")
+        return "tsx";
+    if (["ts", "js", "javascript", "typescript"].includes(language))
         return "typescript";
     if (["html", "htm"].includes(language))
         return "html";

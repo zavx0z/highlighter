@@ -1,6 +1,7 @@
 import {cssHighlighter} from "./languages/css.ts"
 import {htmlHighlighter} from "./languages/html.ts"
 import {jsonHighlighter} from "./languages/json.ts"
+import {jsxHighlighter, tsxHighlighter} from "./languages/jsx.ts"
 import {markdownHighlighter} from "./languages/markdown.ts"
 import {plaintextHighlighter} from "./languages/plaintext.ts"
 import {sqliteHighlighter} from "./languages/sqlite.ts"
@@ -27,6 +28,8 @@ export const builtInLanguageHighlighters: readonly LanguageHighlighter[] = [
   plaintextHighlighter,
   markdownHighlighter,
   typescriptHighlighter,
+  jsxHighlighter,
+  tsxHighlighter,
   sqliteHighlighter,
   cssHighlighter,
   xmlHighlighter,

@@ -3,6 +3,7 @@ import { type RangeToken } from "./range-tokens.ts";
 import { type PatternLanguageId } from "./pattern-languages.ts";
 export declare function tokenizePattern(lines: readonly string[], language: PatternLanguageId, options?: TokenizeOptions): Tokens;
 export declare function tokenizeTypeScriptPattern(lines: readonly string[], options?: TokenizeOptions): Tokens;
+export declare function tokenizeJsxPattern(lines: readonly string[], options?: TokenizeOptions): Tokens;
 export declare function tokenizeSqlitePattern(lines: readonly string[], options?: TokenizeOptions): Tokens;
 export declare function tokenizeJsonPattern(lines: readonly string[], options?: TokenizeOptions): Tokens;
 export declare function tokenizeXmlPattern(lines: readonly string[], options?: TokenizeOptions): Tokens;

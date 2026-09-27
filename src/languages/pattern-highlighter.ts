@@ -3,6 +3,7 @@ import {distributeRangeTokens, pushRange, type RangeToken} from "./range-tokens.
 import {type PatternTokenStream, tokenizePatternText} from "./pattern-engine.ts"
 import {patternLanguages, type PatternLanguageId} from "./pattern-languages.ts"
 import {createTokenCoverage, type TokenCoverage} from "./range-coverage.ts"
+import {jsxRanges} from "./jsx-ranges.ts"
 
 const SCOPE_MAP: Record<string, readonly string[]> = {
   "at": ["punctuation.decorator", "keyword.operator"],
@@ -110,6 +111,39 @@ export function tokenizePattern(
 
 export function tokenizeTypeScriptPattern(lines: readonly string[], options: TokenizeOptions = {}): Tokens {
   return applySqlTemplateOverlays(tokenizePattern(lines, "typescript", options), lines, options)
+}
+
+export function tokenizeJsxPattern(lines: readonly string[], options: TokenizeOptions = {}): Tokens {
+  const source = lines.join("\n")
+  const ranges = jsxRanges(source, options)
+  if (ranges.length === 0) return tokenizeTypeScriptPattern(lines, options)
+  // Пробелы сохраняют UTF-16 offsets и строки, скрывая JSX от JS-грамматики.
+  const masked: string[] = []
+  let cursor = 0
+  for (const range of ranges) {
+    masked.push(source.slice(cursor, range.s), source.slice(range.s, range.e).replace(/[^\r\n]/g, " "))
+    cursor = range.e
+  }
+  masked.push(source.slice(cursor))
+  const script = tokenizeTypeScriptPattern(masked.join("").split("\n"), options)
+  const markup = distributeRangeTokens(ranges, lines)
+  return script.map((tokens, line) => {
+    const overlays = markup[line]!
+    // Например, template-string может покрывать JSX внутри ${…}.
+    const clipped: Tokens[number] = []
+    let overlayIndex = 0
+    for (const token of tokens) {
+      let start = token.s
+      while (overlayIndex < overlays.length && overlays[overlayIndex]!.e <= start) overlayIndex++
+      for (let i = overlayIndex; i < overlays.length && overlays[i]!.s < token.e; i++) {
+        const overlay = overlays[i]!
+        if (overlay.s > start) clipped.push({...token, s: start, e: overlay.s})
+        start = Math.max(start, overlay.e)
+      }
+      if (start < token.e) clipped.push({...token, s: start})
+    }
+    return [...clipped, ...overlays].sort((left, right) => left.s - right.s || left.e - right.e)
+  })
 }
 
 export function tokenizeSqlitePattern(lines: readonly string[], options: TokenizeOptions = {}): Tokens {
@@ -854,6 +888,7 @@ function tokenizeMarkdownFenceContent(
   options: TokenizeOptions,
 ): Tokens {
   const language = markdownFenceLanguage(info)
+  if (language === "jsx" || language === "tsx") return tokenizeJsxPattern(lines, options)
   if (language === "typescript") return tokenizeTypeScriptPattern(lines, options)
   if (language === "html") return tokenizeHtmlPattern(lines, options)
   if (language === "css") return tokenizePattern(lines, "css", options)
@@ -898,9 +933,11 @@ function markdownFenceClose(line: string, fence: MarkdownFence): boolean {
   return line.slice(markerEnd).trim().length === 0
 }
 
-function markdownFenceLanguage(info: string): "typescript" | "html" | "css" | "xml" | "json" | "sql" | "plaintext" {
+function markdownFenceLanguage(info: string): "typescript" | "jsx" | "tsx" | "html" | "css" | "xml" | "json" | "sql" | "plaintext" {
   const language = info.trim().toLowerCase().replace(/^language-/, "")
-  if (["ts", "tsx", "js", "jsx", "javascript", "typescript"].includes(language)) return "typescript"
+  if (language === "jsx" || language === "javascriptreact") return "jsx"
+  if (language === "tsx" || language === "typescriptreact") return "tsx"
+  if (["ts", "js", "javascript", "typescript"].includes(language)) return "typescript"
   if (["html", "htm"].includes(language)) return "html"
   if (language === "css") return "css"
   if (["xml", "svg"].includes(language)) return "xml"

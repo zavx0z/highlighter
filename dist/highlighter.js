@@ -1,6 +1,7 @@
 import { cssHighlighter } from "./languages/css.js";
 import { htmlHighlighter } from "./languages/html.js";
 import { jsonHighlighter } from "./languages/json.js";
+import { jsxHighlighter, tsxHighlighter } from "./languages/jsx.js";
 import { markdownHighlighter } from "./languages/markdown.js";
 import { plaintextHighlighter } from "./languages/plaintext.js";
 import { sqliteHighlighter } from "./languages/sqlite.js";
@@ -10,6 +11,8 @@ export const builtInLanguageHighlighters = [
     plaintextHighlighter,
     markdownHighlighter,
     typescriptHighlighter,
+    jsxHighlighter,
+    tsxHighlighter,
     sqliteHighlighter,
     cssHighlighter,
     xmlHighlighter,
