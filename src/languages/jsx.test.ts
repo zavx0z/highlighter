@@ -33,7 +33,7 @@ describe("JSX / TSX", () => {
   })
 
   test("многострочный пример Inspector: компоненты, props и вложенный объект", () => {
-    const source = `import {Tab} from "@zavx0z/ui/surfaces/tab"
+    const source = `import {Tab} from "@immersive-ui/component/surfaces/tab"
 <Tab
   label={null}
   position={{
